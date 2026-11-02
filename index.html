@@ -21,7 +21,7 @@ const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('uz-UZ').
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function load(){
  const {data,error}=await db.from('products').select('id,name,category,size,image_url,price_usd,stock,is_active').eq('is_active',true).order('name');
- if(error){$('products').textContent='Mahsulotlarni yuklab bo‘lmadi. RLS sozlamalarini tekshirish kerak.';return}
+ if(error){$('products').textContent='Xatolik: '+error.message;return}
  products=data||[];let cats=[...new Set(products.map(p=>p.category).filter(Boolean))];
  $('category').innerHTML='<option value="">Barcha bo‘limlar</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');render();
 }
