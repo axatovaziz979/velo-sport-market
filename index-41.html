@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VELO SPORT MARKET</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f4f6fa;color:#172033}header{background:#12324d;color:white;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}main{max-width:1000px;margin:auto;padding:20px}.hero,.panel,.card{background:white;border-radius:12px;padding:16px;margin:12px 0}.hero{background:#e5f1fb}button{background:#1264a3;color:white;border:0;border-radius:8px;padding:11px;cursor:pointer}input,select,textarea{padding:11px;border:1px solid #ccd4df;border-radius:8px;margin:5px;max-width:100%}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}.card{display:flex;flex-direction:column;gap:8px}.photo{height:120px;background:#edf1f6;display:grid;place-items:center;border-radius:8px}.photo img{max-width:100%;max-height:120px}.muted{color:#65748a;font-size:13px}.hidden{display:none}.row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #ddd;padding:8px 0}.success{color:green}
+</style></head><body>
+<header><b>🚲 VELO SPORT MARKET</b><button id="cartToggle">Savat (<span id="cartCount">0</span>)</button></header>
+<main><section class="hero"><h1>VELO SPORT — BOLALAR TRANSPORTI VA SPORT TOVARLARI</h1><p>Velosipedlar, samokatlar, bolalar transporti, ehtiyot qismlar va sport anjomlari.</p></section>
+<h2>Mahsulotlar <small id="count"></small></h2><input id="search" placeholder="Mahsulot qidirish"><select id="category"><option value="">Barcha bo‘limlar</option></select>
+<div id="products" class="grid">Mahsulotlar yuklanmoqda...</div>
+<section id="cart" class="panel hidden"><h2>Savat</h2><div id="lines"></div><p><b>Jami: <span id="total">0</span></b></p>
+<h3>Buyurtma ma’lumotlari</h3><form id="order"><input name="customer" placeholder="Ismingiz" required minlength="2"><input name="phone" placeholder="Telefon raqamingiz" required><input name="address" placeholder="Manzil (ixtiyoriy)"><textarea name="comment" placeholder="Izoh (ixtiyoriy)"></textarea><p><button type="submit">Buyurtma yuborish</button></p></form><p id="message"></p></section>
+<p class="muted">Buyurtma yuborilgach, do‘kon egasi telefon orqali bog‘lanib tasdiqlaydi.</p></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const URL="https://etchkpadqzmwouqprxug.supabase.co";
+const KEY="sb_publishable_bQlL1UEQbPWDycuwprqHEA_uCO6MycP";
+const db=window.supabase.createClient(URL,KEY), RATE=13000;
+let products=[],cart=[];
+const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('uz-UZ').format(Math.round(n))+" so‘m";
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function load(){
+ const {data,error}=await db.from('products').select('id,name,category,size,image_url,price_usd,stock,is_active').eq('is_active',true).order('name');
+ if(error){$('products').textContent='Mahsulotlarni yuklab bo‘lmadi. RLS sozlamalarini tekshirish kerak.';return}
+ products=data||[];let cats=[...new Set(products.map(p=>p.category).filter(Boolean))];
+ $('category').innerHTML='<option value="">Barcha bo‘limlar</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');render();
+}
+function render(){
+ let q=$('search').value.toLowerCase(),c=$('category').value;
+ let list=products.filter(p=>(!c||p.category===c)&&(!q||p.name.toLowerCase().includes(q)));
+ $('count').textContent=`(${list.length} ta)`;$('products').innerHTML=list.length?list.map(p=>`<article class="card"><div class="photo">${p.image_url?`<img src="${esc(p.image_url)}">`:'🚲'}</div><b>${esc(p.name)}</b><span class="muted">${esc(p.category||'')} ${esc(p.size||'')}</span><b>${money(Number(p.price_usd)*RATE)}</b><span class="muted">Omborda: ${p.stock}</span><button ${p.stock<1?'disabled':''} onclick="add('${p.id}')">Savatga qo‘shish</button></article>`).join(''):'<p>Hozircha mahsulot qo‘shilmagan.</p>';
+}
+window.add=id=>{let p=products.find(x=>x.id===id),x=cart.find(x=>x.id===id);if(x){if(x.qty>=p.stock)return alert('Omborda yetarli emas');x.qty++}else cart.push({id,qty:1});renderCart()};
+function renderCart(){$('cartCount').textContent=cart.reduce((a,x)=>a+x.qty,0);$('lines').innerHTML=cart.map(x=>{let p=products.find(y=>y.id===x.id);return `<div class="row"><span>${esc(p.name)} × ${x.qty}</span><button onclick="removeItem('${x.id}')">−</button></div>`}).join('');$('total').textContent=money(cart.reduce((a,x)=>a+Number(products.find(p=>p.id===x.id).price_usd)*RATE*x.qty,0))}
+window.removeItem=id=>{let x=cart.find(y=>y.id===id);if(x.qty>1)x.qty--;else cart=cart.filter(y=>y.id!==id);renderCart()};
+$('cartToggle').onclick=()=>$('cart').classList.toggle('hidden');$('search').oninput=render;$('category').onchange=render;
+$('order').onsubmit=async e=>{e.preventDefault();if(!cart.length)return $('message').textContent='Savat bo‘sh.';let f=new FormData(e.target),btn=e.target.querySelector('button');btn.disabled=true;$('message').textContent='Yuborilmoqda...';
+let {data,error}=await db.rpc('place_order',{p_customer_name:f.get('customer'),p_phone:f.get('phone'),p_address:f.get('address'),p_comment:f.get('comment'),p_items:cart.map(x=>({product_id:x.id,quantity:x.qty})),p_exchange_rate:RATE});btn.disabled=false;
+if(error){$('message').textContent='Xatolik: '+error.message;return}cart=[];e.target.reset();renderCart();await load();$('message').textContent='Buyurtma qabul qilindi. Raqam: '+data;$('message').className='success'};
+load();
+</script></body></html>
