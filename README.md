@@ -1,2 +1,2 @@
 # velo-sport-market
-VELO SPORT MARKET internet dodkon
+VELO SPORT MARKET internet doʻkon
