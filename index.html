@@ -15,7 +15,12 @@ body{font-family:Arial,sans-serif;margin:0;background:#f4f6fa;color:#172033}head
 <script>
 const URL="https://etchkpadqzmwouqprxug.supabase.co";
 const KEY="sb_publishable_bQlL1UEQbPWDycuwprqHEA_uCO6MycP";
-const db=window.supabase.createClient(URL,KEY), RATE=13000;
+if (!window.supabase) {
+  document.getElementById('products').textContent =
+    'Xatolik: Supabase kutubxonasi yuklanmadi. Internetni tekshiring.';
+  throw new Error('Supabase kutubxonasi topilmadi');
+}
+const db = window.supabase.createClient(URL, KEY), RATE = 13000;
 let products=[],cart=[];
 const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('uz-UZ').format(Math.round(n))+" so‘m";
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
